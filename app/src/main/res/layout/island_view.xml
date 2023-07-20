@@ -6,12 +6,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     app:cardBackgroundColor="@color/black"
     android:background="@color/black" >
-
-    <com.drago.dynamicoasis.views.RingView
+    <com.drago.dynamicoasis.views.RotatingAlbumView
+        android:id="@+id/rotatingAlbum"
+        android:layout_width="25dp"
+        android:layout_gravity="center|start"
+        android:src="@drawable/ic_launcher_background"
+        android:layout_marginHorizontal="8dp"
+        android:layout_height="match_parent"/>
+    <com.drago.dynamicoasis.views.WaveformView
         android:layout_gravity="center|end"
         android:id="@+id/ring_view"
         android:layout_height="match_parent"
-        android:layout_margin="4dp"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginVertical="4dp"
         android:foregroundGravity="center"
         android:layout_width="25dp" />
 </androidx.cardview.widget.CardView>
