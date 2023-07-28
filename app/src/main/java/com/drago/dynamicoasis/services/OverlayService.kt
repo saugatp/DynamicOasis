@@ -9,9 +9,8 @@ import android.content.ComponentName
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.graphics.drawable.Icon
-import android.media.MediaMetadata
-import android.media.session.MediaController
 import android.media.session.MediaSessionManager
+import android.opengl.Visibility
 import android.util.DisplayMetrics
 import android.util.Log
 import android.util.TypedValue
@@ -21,36 +20,30 @@ import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
 import android.view.accessibility.AccessibilityEvent
 import android.view.animation.OvershootInterpolator
-import android.widget.ImageView
-import androidx.core.content.getSystemService
 import com.drago.dynamicoasis.R
-import com.drago.dynamicoasis.receivers.MusicPlaybackReceiver
-import com.drago.dynamicoasis.receivers.NotificationService
-import com.drago.dynamicoasis.views.RingView
+import com.drago.dynamicoasis.receivers.NotificationReceiver
 import com.drago.dynamicoasis.views.RotatingAlbumView
 import com.drago.dynamicoasis.views.WaveformView
-import java.lang.Error
-import java.lang.Exception
 
 
-class OverlayService: AccessibilityService(), MusicPlaybackReceiver.MusicPlaybackListener {
-    lateinit var island:View
+class OverlayService : AccessibilityService(), NotificationReceiver.NotificationStatsListener {
+    lateinit var island: View
     lateinit var windowManager: WindowManager
     lateinit var windowManagerParams: LayoutParams
-    lateinit var ringView:WaveformView
-    lateinit var rotateView:RotatingAlbumView
-    lateinit var musicPlaybackReceiver: MusicPlaybackReceiver
+    lateinit var ringView: WaveformView
+    lateinit var rotateView: RotatingAlbumView
+    lateinit var notificationReceiver: NotificationReceiver
     lateinit var mediaSessionManager: MediaSessionManager
     override fun onCreate() {
         super.onCreate()
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager;
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         island = LayoutInflater.from(this).inflate(R.layout.island_view, null)
         ringView = island.findViewById(R.id.ring_view)
         rotateView = island.findViewById(R.id.rotatingAlbum)
         mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
         mediaSessionManager.addOnActiveSessionsChangedListener({
-            for (mcontroller in it!!){
-                Log.d("MEDIA_COMMUNICATION_SERVICE", "media: "+mcontroller.packageName)
+            for (mcontroller in it!!) {
+                Log.d("MEDIA_COMMUNICATION_SERVICE", "media: " + mcontroller.packageName)
             }
         }, ComponentName(this, OverlayService::class.java))
         windowManagerParams = LayoutParams(
@@ -66,7 +59,7 @@ class OverlayService: AccessibilityService(), MusicPlaybackReceiver.MusicPlaybac
         val displayWidth = displayMetrics.widthPixels
         val displayHeight = displayMetrics.heightPixels
 
-        windowManagerParams.x= -360
+        windowManagerParams.x = -360
         windowManagerParams.y = -1080
     }
 
@@ -78,35 +71,36 @@ class OverlayService: AccessibilityService(), MusicPlaybackReceiver.MusicPlaybac
 
     }
 
-    override fun onPause() {
-        super.onPause()
+    override fun onPause(intent: Intent) {
+        rotateView.setImageIcon(intent.extras?.get("icon_large") as Icon)
+        super.onPause(intent)
     }
 
     override fun onPlay(intent: Intent) {
         super.onPlay(intent)
-        Log.d("OVERLAY_SERVICE", "onGotNotif: Notification received${intent.extras?.getString("package_name")}")
+        Log.d(
+            "OVERLAY_SERVICE",
+            "onGotNotif: Notification received${intent.extras?.getString("package_name")}"
+        )
         try {
             windowManager.removeView(island)
-        }    catch (e:Exception){
-            Log.e("OVERLAY_SERVICE", "Unable to remove view: ${e.localizedMessage}", )
+        } catch (e: Exception) {
+            Log.e("OVERLAY_SERVICE", "Unable to remove view: ${e.localizedMessage}")
         }
         try {
             windowManager.addView(island, windowManagerParams)
-        }catch (e:Exception){
-            Log.e("OVERLAY_SERVICE", "Unable to add view: ${e.localizedMessage}", )
+        } catch (e: Exception) {
+            Log.e("OVERLAY_SERVICE", "Unable to add view: ${e.localizedMessage}")
         }
         rotateView.setImageIcon(intent.extras?.get("icon_large") as Icon)
-        animateFloatingWindow()
+        animateFloatingWindow(island.windowToken!=null)
     }
 
-    override fun onStop() {
-        super.onStop()
-    }
     override fun onServiceConnected() {
         super.onServiceConnected()
-        musicPlaybackReceiver = MusicPlaybackReceiver(this)
-        musicPlaybackReceiver.register(this)
-        Log.d("B_CAST", "REGISTERERD");
+        notificationReceiver = NotificationReceiver(this)
+        notificationReceiver.register(this)
+        Log.d("B_CAST", "REGISTERERD")
     }
 
     fun dpToInt(v: Int): Int {
@@ -117,52 +111,66 @@ class OverlayService: AccessibilityService(), MusicPlaybackReceiver.MusicPlaybac
         ).toInt()
     }
 
-    private fun closeFloatingWindow(){
+    private fun closeFloatingWindow() {
         try {
-
             windowManager.removeViewImmediate(island)
             windowManager.removeView(island)
-        }catch (e:Exception){
-            Log.e("OVERLAY_SERVICE", "Unable to remove view: ${e.localizedMessage}", )
+        } catch (e: Exception) {
+            Log.e("OVERLAY_SERVICE", "Unable to remove view: ${e.localizedMessage}")
         }
         // Stop the service
-        stopSelf();
+        stopSelf()
     }
 
     override fun onDestroy() {
         closeFloatingWindow()
-        musicPlaybackReceiver.unregister(applicationContext)
+        notificationReceiver.unregister(applicationContext)
         super.onDestroy()
     }
-    private fun animateFloatingWindow() {
-        // Calculate the target width for the floating window
+
+    override fun onDownload(progress: Int, total: Int, image:Icon) {
+        super.onDownload(progress, total, image)
+        Log.d("OVERLAY_SERVICE", "onDownload: $progress $total")
+        try {
+            windowManager.removeView(island)
+        } catch (e: Exception) {
+            Log.e("OVERLAY_SERVICE", "Unable to remove view: ${e.localizedMessage}")
+        }
+        try {
+            windowManager.addView(island, windowManagerParams)
+        } catch (e: Exception) {
+            Log.e("OVERLAY_SERVICE", "Unable to add view: ${e.localizedMessage}")
+        }
+        rotateView.visibility = View.GONE
+        //rotateView.setImageIcon(image)
+        animateFloatingWindow(island.windowToken!=null)
+    }
+
+    private fun animateFloatingWindow(isNewNotif:Boolean) {
         val targetWidth = dpToInt(120)
 
-        // Create the ValueAnimator for expanding the width
         val widthAnimator = ValueAnimator.ofInt(80, targetWidth)
         widthAnimator.duration = 400
         widthAnimator.interpolator = OvershootInterpolator()
         widthAnimator.addUpdateListener {
-            windowManagerParams.width = Math.abs(it.getAnimatedValue() as Int)
+            windowManagerParams.width = Math.abs(it.animatedValue as Int)
             windowManager.updateViewLayout(island, windowManagerParams)
         }
         // Create the AnimatorSet to play the animations sequentially
         val animatorSet = AnimatorSet()
-        animatorSet.play(widthAnimator)
+
+        if(isNewNotif){
+            animatorSet.play(widthAnimator)
+        }
 
         // Set an AnimatorListener to handle the closing of the floating window
         animatorSet.addListener(object : AnimatorListenerAdapter() {
-            override fun onAnimationStart(animation: Animator) {
-                super.onAnimationStart(animation)
-            }
-
             override fun onAnimationEnd(animation: Animator) {
                 //closeFloatingWindow()
                 val toProgress = 0.7f
                 val duration = 800L // milliseconds
                 ringView.startAnimation()
                 rotateView.startRotation()
-
                 //ringView.animateProgress(toProgress, duration)
             }
         })

@@ -6,7 +6,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     app:cardBackgroundColor="@color/black"
     android:background="@color/black" >
-    <com.drago.dynamicoasis.views.RotatingAlbumView
+    <com.drago.dynamicoasis.views.ClockAnimationView
         android:id="@+id/rotatingAlbum"
         android:layout_width="25dp"
         android:layout_gravity="center|start"

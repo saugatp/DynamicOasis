@@ -24,7 +24,6 @@ class RotatingAlbumView @JvmOverloads constructor(
     }
 
     init {
-        // Set the view to draw a circular clipping path
         setLayerType(LAYER_TYPE_HARDWARE, null)
     }
 

@@ -4,23 +4,33 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.drawable.Icon
 import android.util.Log
 
-class MusicPlaybackReceiver(private val listener: MusicPlaybackListener): BroadcastReceiver(){
+class NotificationReceiver(private val listener: NotificationStatsListener): BroadcastReceiver(){
+    var lastIntent:String = ""
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("B_CAST", intent.action.toString());
         if (intent.action=="${context.packageName}.NOTIFICATION_POSTED") {
             Log.d("MusicPlaybackReceiver", "onReceive: ${intent.getStringExtra("package_name")}")
+            if(!intent.extras!!.getBoolean("isNotProgress")){
+                listener.onDownload(intent.extras!!.getInt("progress"),intent.extras!!.getInt("progressMax"), intent.extras?.get("icon_small") as Icon)
+            }
             if(intent.extras?.getString("category")=="transport"){
-                listener.onPlay(intent)
+                if(lastIntent==context.packageName){
+                    listener.onPause(intent)
+                }else{
+                    listener.onPlay(intent)
+                }
+                lastIntent = context.packageName
             }
         }
     }
 
-    interface MusicPlaybackListener{
+    interface NotificationStatsListener{
         fun onPlay(intent: Intent) {}
-        fun onPause(){}
-        fun onStop(){}
+        fun onPause(intent: Intent){}
+        fun onDownload(progress:Int,total:Int, image:Icon){}
+        fun onCustomNotification(intent: Intent){}
     }
 
     companion object {

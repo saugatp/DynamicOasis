@@ -58,7 +58,6 @@ class WaveformView @JvmOverloads constructor(
             rect.set((centerX - barWidth / 2f)+1f, top*1f, centerX + barWidth / 2f, bottom*1f)
             canvas.drawRoundRect(rect, 20f, 20f, paint!!)
         }
-
         invalidate()
     }
 
